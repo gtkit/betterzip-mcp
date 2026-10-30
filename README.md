@@ -2,7 +2,7 @@
 
 让 Codex、Claude 等 AI 工具调用 Mac 上的 BetterZip。安装并连接后，直接说“把这个文件夹压缩成 ZIP”即可，无需编写代码。支持 ZIP、7z 的压缩与解压。
 
-> **发布状态：v0.1.2 正在准备发布，包含首次使用文件夹选择与聊天中修改授权目录；[v0.1.1](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.1) 仍为当前公开版本。npm 发布继续暂缓。以下自动引导流程需要 v0.1.2 发布后才会通过远程安装获得，旧版 v0.1.1 仍使用 `setup`。**
+> **发布状态：[GitHub v0.1.2 Release](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.2) 已发布，包含首次使用文件夹选择、持久保存及聊天中修改授权目录。通过下方两条 Codex 命令安装后，运行程序由启动器自动下载并校验。npm 发布继续暂缓。**
 
 ## 安装到你使用的 AI 工具
 
@@ -29,7 +29,7 @@
 
 #### Codex 原生插件安装
 
-使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。此路线不依赖 npm 发布。**下述文件夹自动引导随 v0.1.2 发布，当前正在准备。**
+使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。此路线不依赖 npm 发布。**v0.1.2 已包含下述文件夹自动引导。**
 
 1. 添加插件市场：
 
@@ -53,7 +53,7 @@ codex plugin add betterzip-mcp@gtkit-local-tools
 
 #### Codex MCP 接入
 
-**直接使用 GitHub Release 二进制：** 此方式适合不使用插件启动器的用户，需要自行下载。v0.1.1 程序：[Apple Silicon](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/betterzip-mcp-darwin-arm64)、[Intel](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/betterzip-mcp-darwin-amd64)。用 `shasum -a 256 文件名` 与 Release 的 [SHA256SUMS](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/SHA256SUMS) 对照。给下载文件添加执行权限并设置目录，例如 Apple Silicon：
+**直接使用 GitHub Release 二进制：** 此方式适合不使用插件启动器的用户，需要自行下载。v0.1.2 程序：[Apple Silicon](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.2/betterzip-mcp-darwin-arm64)、[Intel](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.2/betterzip-mcp-darwin-amd64)。用 `shasum -a 256 文件名` 与 Release 的 [SHA256SUMS](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.2/SHA256SUMS) 对照。给下载文件添加执行权限并设置目录，例如 Apple Silicon：
 
 ```bash
 chmod +x ./betterzip-mcp-darwin-arm64
@@ -199,9 +199,9 @@ printf '%s\n' "$(npm root -g)/@gtkit/betterzip-mcp/bin/betterzip-mcp"
 
 “授权文件夹”是你允许工具读写的位置。每位用户自己选择，不会默认使用开发者目录、插件安装目录或整个主目录。
 
-当前源码提供原生文件夹选择：在聊天中说“设置 BetterZip 授权目录”；首次压缩或解压未配置时也会弹出选择窗口。界面显示的范围是所选文件夹及其子文件夹，模型不能传入路径代替你的选择。取消、超时或保存失败不改变已有选择。窗口最多等待两分钟，可再次发起。
+v0.1.2 提供原生文件夹选择：在聊天中说“设置 BetterZip 授权目录”；首次压缩或解压未配置时也会弹出选择窗口。界面显示的范围是所选文件夹及其子文件夹，模型不能传入路径代替你的选择。取消、超时或保存失败不改变已有选择。窗口最多等待两分钟，可再次发起。
 
-想修改时说“修改 BetterZip 授权目录”，再次选择并保存即可。新请求立即使用新设置，已经开始的操作仍按原授权快照完成。该流程尚未发布；旧版或偏好终端的用户仍可运行：
+想修改时说“修改 BetterZip 授权目录”，再次选择并保存即可。新请求立即使用新设置，已经开始的操作仍按原授权快照完成。旧版或偏好终端的用户仍可运行：
 
 通过 GitHub 下载程序的用户，请把下文的 `betterzip-mcp` 换成下载程序的实际路径，例如 `./betterzip-mcp-darwin-arm64`。npm 发布并安装后，才可直接使用 `betterzip-mcp` 命令。
 
@@ -217,7 +217,7 @@ betterzip-mcp setup
 betterzip-mcp setup --root "$HOME/Downloads"
 ```
 
-设置会保存到当前用户的配置文件 `~/Library/Application Support/betterzip-mcp/config.json`，独立于插件和项目目录。当前源码会在每次操作开始时读取设置，因此聊天选择和 `setup` 修改都对下一次请求生效；v0.1.1 修改后需要重连。插件升级不会因为替换安装目录而丢失这份设置。
+设置会保存到当前用户的配置文件 `~/Library/Application Support/betterzip-mcp/config.json`，独立于插件和项目目录。v0.1.2 会在每次操作开始时读取设置，因此聊天选择和 `setup` 修改都对下一次请求生效；v0.1.1 修改后需要重连。插件升级不会因为替换安装目录而丢失这份设置。
 
 目录必须已经存在。一次设置一个授权根目录，包含其子文件夹；目录外的文件会被拒绝。未配置时也能连接并发现工具，连接本身不弹窗；只有文件操作或明确的设置请求才打开选择框。无 macOS 图形会话时选择会明确失败，可使用终端 `setup`。不会静默授权插件安装目录。
 
@@ -239,7 +239,7 @@ betterzip-mcp --diagnose
 | 下载二进制失败 | 确认指定 Release 已有对应架构附件，并且启动器所在进程能访问 GitHub |
 | 浏览器能下载，但 Node 启动器连接 GitHub 超时 | 浏览器或系统代理不一定被 Node 继承；配置 Node 使用所需代理，或改用上面的 Release 二进制直接接入 MCP |
 | “没有加载 MCP 工具” | 查看客户端的 MCP 连接状态，确认已连接后重启会话；“已安装”不等于“已连接” |
-| “尚未设置授权目录” | 当前源码可在聊天中要求“设置 BetterZip 授权目录”；旧版运行 `betterzip-mcp setup` 后重连 |
+| “尚未设置授权目录” | v0.1.2 可在聊天中要求“设置 BetterZip 授权目录”；旧版运行 `betterzip-mcp setup` 后重连 |
 | “路径超出授权目录” | 将文件放入已授权文件夹，或在聊天中要求“修改 BetterZip 授权目录”；旧版仍通过 `setup` 修改 |
 | 选择窗口被取消、超时或无法打开 | 未授权或修改任何目录，可重新发起；原生选择需要可用的 macOS 桌面会话 |
 | 设置后仍使用旧目录 | 用 `--diagnose` 查看来源，检查客户端是否还有 `--root` 或环境变量覆盖 |
@@ -281,7 +281,7 @@ codex plugin add betterzip-mcp@gtkit-local-tools
 codex mcp add betterzip -- "$PWD/bin/betterzip-mcp"
 ```
 
-其他客户端也可直接使用该二进制，授权目录默认读取用户保存的设置，也可用 `--root` 单独覆盖。当前源码下一次请求会读取修改后的设置；旧版 v0.1.1 仍需重连。
+其他客户端也可直接使用该二进制，授权目录默认读取用户保存的设置，也可用 `--root` 单独覆盖。v0.1.2 下一次请求会读取修改后的设置；旧版 v0.1.1 仍需重连。
 
 ## 工具与参数
 
@@ -291,7 +291,7 @@ codex mcp add betterzip -- "$PWD/bin/betterzip-mcp"
 | `betterzip_extract` | archive_path、output_dir | 免费解压未加密的 ZIP/7z 到新目录 |
 | `betterzip_encrypt_compress` | working_dir、output_archive、sources[]、password | 仅会员提示；不压缩、不保存/回显密码 |
 | `betterzip_split_compress` | working_dir、output_archive、sources[]、split_size | 仅会员提示；不创建分卷；split_size 例如 `100m` |
-| `betterzip_configure` | 无参数 | 当前源码新增：打开本机目录选择窗口并保存用户选择，供首次授权或之后修改；不接受模型提供的路径 |
+| `betterzip_configure` | 无参数 | v0.1.2 新增：打开本机目录选择窗口并保存用户选择，供首次授权或之后修改；不接受模型提供的路径 |
 
 会员接口是产品预留的纯文本提示，尚未接入购买或验证服务，不会假称已检查 BetterZip 授权，也不包含虚构的付费链接。基础功能的返回不包含营销文案。
 
@@ -369,7 +369,7 @@ export BETTERZIP_MCP_7ZA="/Applications/BetterZip.app/Contents/Helpers/7za"
 
 修改原项目后，可再次执行 `codex plugin add betterzip-mcp@gtkit-local-tools` 刷新已安装副本。正在运行的聊天可能仍持有旧连接；在客户端重新加载 MCP，或重启 Codex 后再使用。仅看到插件已安装，不代表 MCP 握手成功。
 
-当前源码在首次文件操作时通过原生窗口获得用户选择，并仅保存自己的用户授权配置；也可显式运行 `setup`。未配置或用户取消时不使用插件安装目录。插件不会自行修改 Codex 或其他客户端的配置。插件的 `composerIcon` 和 `logo` 均使用随包提供的 `icon.png`，来源为本机 BetterZip 6 应用图标。
+v0.1.2 在首次文件操作时通过原生窗口获得用户选择，并仅保存自己的用户授权配置；也可显式运行 `setup`。未配置或用户取消时不使用插件安装目录。插件不会自行修改 Codex 或其他客户端的配置。插件的 `composerIcon` 和 `logo` 均使用随包提供的 `icon.png`，来源为本机 BetterZip 6 应用图标。
 
 ## 环境与文件
 
@@ -479,7 +479,7 @@ cd ..
 4. 在 `gtkit/betterzip-mcp` 发布对应版本（需要维护者已登录 GitHub CLI）：
 
 ```bash
-gh release create v0.1.1 dist/betterzip-mcp-darwin-arm64 dist/betterzip-mcp-darwin-amd64 dist/SHA256SUMS --repo gtkit/betterzip-mcp --title 'v0.1.1' --generate-notes
+gh release create v0.1.2 dist/betterzip-mcp-darwin-arm64 dist/betterzip-mcp-darwin-amd64 dist/SHA256SUMS --repo gtkit/betterzip-mcp --title 'v0.1.2' --generate-notes
 ```
 
 5. 核对 npm 白名单并打包。包内不得出现 `cmd/`、`internal/`、Go 文件或 `bin/`：
@@ -487,13 +487,13 @@ gh release create v0.1.1 dist/betterzip-mcp-darwin-arm64 dist/betterzip-mcp-darw
 ```bash
 npm pack --dry-run --ignore-scripts
 npm pack --ignore-scripts --pack-destination dist
-tar -tzf dist/gtkit-betterzip-mcp-0.1.1.tgz
+tar -tzf dist/gtkit-betterzip-mcp-0.1.2.tgz
 ```
 
 6. Release 可访问后，在已登录且拥有 `@gtkit` 发布权限的环境发布 npm 包：
 
 ```bash
-npm publish dist/gtkit-betterzip-mcp-0.1.1.tgz --access public
+npm publish dist/gtkit-betterzip-mcp-0.1.2.tgz --access public
 ```
 
 包名与下载仓库已配置为 `@gtkit/betterzip-mcp` 与 `gtkit/betterzip-mcp`；实际 npm 名称可用性、组织权限和远端发布仍由维护者确认。当前 package license 为 `UNLICENSED`，不代替权利人授予开源许可。维护者应在发布前明确分发许可；本项目不打包/再分发 BetterZip 的 7za。
