@@ -1,0 +1,24 @@
+{
+  "name": "@gtkit/betterzip-mcp",
+  "version": "0.1.0",
+  "description": "Local macOS archiving MCP server written in Go, using BetterZip's bundled 7za",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "os": ["darwin"],
+  "cpu": ["arm64", "x64"],
+  "engines": { "node": ">=20" },
+  "bin": { "betterzip-mcp": "launch.js" },
+  "files": ["launch.js", "install.js", ".codex-plugin/plugin.json", ".mcp.json", ".agents/plugins/marketplace.json", ".env.example", "settings.example.json", "icon.png", "README.md"],
+  "scripts": {
+    "postinstall": "node install.js",
+    "test": "node --test install.test.js"
+  },
+  "repository": { "type": "git", "url": "git+https://github.com/gtkit/betterzip-mcp.git" },
+  "homepage": "https://github.com/gtkit/betterzip-mcp",
+  "bugs": { "url": "https://github.com/gtkit/betterzip-mcp/issues" },
+  "publishConfig": { "access": "public" },
+  "betterzipConfig": {
+    "urlPattern": "https://github.com/gtkit/betterzip-mcp/releases/download/v{version}/betterzip-mcp-darwin-{arch}",
+    "checksumPattern": "https://github.com/gtkit/betterzip-mcp/releases/download/v{version}/SHA256SUMS"
+  }
+}

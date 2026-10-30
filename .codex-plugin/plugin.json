@@ -1,0 +1,14 @@
+{
+  "name": "betterzip-mcp",
+  "version": "0.1.0",
+  "description": "Local ZIP and 7z tools using BetterZip's bundled 7za. No LLM requests or API keys.",
+  "author": { "name": "gtkit" },
+  "homepage": "https://github.com/gtkit/betterzip-mcp",
+  "repository": "https://github.com/gtkit/betterzip-mcp",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "BetterZip MCP",
+    "composerIcon": "./icon.png",
+    "logo": "./icon.png"
+  }
+}

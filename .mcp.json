@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "betterzip": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./launch.js"],
+      "cwd": "./",
+      "env_vars": ["BETTERZIP_MCP_ROOT", "BETTERZIP_MCP_7ZA"]
+    }
+  }
+}
