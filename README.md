@@ -2,7 +2,7 @@
 
 让 Codex、Claude 等 AI 工具调用 Mac 上的 BetterZip。安装并连接后，直接说“把这个文件夹压缩成 ZIP”即可，无需编写代码。支持 ZIP、7z 的压缩与解压。
 
-> **发布状态：GitHub v0.1.1 Release 正在准备，以下 v0.1.1 下载链接在发布后可用；当前仍可下载 [v0.1.0](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.0)。npm 发布暂缓，文中明确标出的 npm 命令暂不可用。公开用户按前面的 Codex 插件安装和 GitHub 二进制下载步骤操作；授权文件夹通过 `setup` 设置并保存，当前没有图形化选择框。**
+> **发布状态：[GitHub v0.1.1 Release](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.1) 已发布，提供 Apple Silicon / Intel 二进制及 SHA-256 校验文件。npm 发布暂缓，文中明确标出的 npm 命令暂不可用。公开用户按前面的 Codex 插件安装和 GitHub 二进制下载步骤操作；授权文件夹通过 `setup` 设置并保存，当前没有图形化选择框。**
 
 ## 安装到你使用的 AI 工具
 
@@ -29,7 +29,7 @@
 
 #### Codex 原生插件安装
 
-使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。**v0.1.1 正在准备，发布后以下路线不依赖 npm 发布。**
+使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。**v0.1.1 已发布，以下路线不依赖 npm 发布。**
 
 1. 添加插件市场：
 
