@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	Version               = "0.1.0"
+	Version               = "0.1.1"
 	DefaultTimeout        = 5 * time.Minute
 	DefaultMaxBytes int64 = 4 << 30
 )

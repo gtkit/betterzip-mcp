@@ -2,7 +2,7 @@
 
 让 Codex、Claude 等 AI 工具调用 Mac 上的 BetterZip。安装并连接后，直接说“把这个文件夹压缩成 ZIP”即可，无需编写代码。支持 ZIP、7z 的压缩与解压。
 
-> **发布状态：[GitHub v0.1.0 Release](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.0) 已发布，提供 Apple Silicon / Intel 二进制及 SHA-256 校验文件。npm 发布暂缓，文中明确标出的 npm 命令暂不可用。公开用户按前面的 Codex 插件安装和 GitHub 二进制下载步骤操作；授权文件夹通过 `setup` 设置并保存，当前没有图形化选择框。**
+> **发布状态：GitHub v0.1.1 Release 正在准备，以下 v0.1.1 下载链接在发布后可用；当前仍可下载 [v0.1.0](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.0)。npm 发布暂缓，文中明确标出的 npm 命令暂不可用。公开用户按前面的 Codex 插件安装和 GitHub 二进制下载步骤操作；授权文件夹通过 `setup` 设置并保存，当前没有图形化选择框。**
 
 ## 安装到你使用的 AI 工具
 
@@ -29,7 +29,7 @@
 
 #### Codex 原生插件安装
 
-使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。**v0.1.0 已发布，以下路线不依赖 npm 发布。**
+使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。**v0.1.1 正在准备，发布后以下路线不依赖 npm 发布。**
 
 1. 添加插件市场：
 
@@ -43,10 +43,10 @@ codex plugin marketplace add gtkit/betterzip-mcp
 codex plugin add betterzip-mcp@gtkit-local-tools
 ```
 
-3. 从 [v0.1.0 Release](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.0) 下载与你的 Mac 对应的程序，用它设置授权目录：
+3. 从 [v0.1.1 Release](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.1) 下载与你的 Mac 对应的程序，用它设置授权目录：
 
-   - **Apple Silicon（M 系列芯片）**：[betterzip-mcp-darwin-arm64](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.0/betterzip-mcp-darwin-arm64)
-   - **Intel**：[betterzip-mcp-darwin-amd64](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.0/betterzip-mcp-darwin-amd64)
+   - **Apple Silicon（M 系列芯片）**：[betterzip-mcp-darwin-arm64](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/betterzip-mcp-darwin-arm64)
+   - **Intel**：[betterzip-mcp-darwin-amd64](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/betterzip-mcp-darwin-amd64)
 
 在保存下载文件的文件夹打开终端，只执行对应架构的一组命令。Apple Silicon：
 
@@ -62,7 +62,7 @@ chmod +x ./betterzip-mcp-darwin-amd64
 ./betterzip-mcp-darwin-amd64 setup
 ```
 
-可用 `shasum -a 256 文件名` 计算下载文件的 SHA-256，与 Release 中的 [SHA256SUMS](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.0/SHA256SUMS) 对照。设置保存在用户配置中，Codex 插件会读取同一份设置，不需要指定下载程序所在目录作为授权目录。
+可用 `shasum -a 256 文件名` 计算下载文件的 SHA-256，与 Release 中的 [SHA256SUMS](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/SHA256SUMS) 对照。设置保存在用户配置中，Codex 插件会读取同一份设置，不需要指定下载程序所在目录作为授权目录。
 
 4. 完全退出并重新打开 Codex，确认 `betterzip` 已连接；命令行中可用 `/mcp` 查看连接状态。
 
@@ -483,7 +483,7 @@ cd ..
 4. 在 `gtkit/betterzip-mcp` 发布对应版本（需要维护者已登录 GitHub CLI）：
 
 ```bash
-gh release create v0.1.0 dist/betterzip-mcp-darwin-arm64 dist/betterzip-mcp-darwin-amd64 dist/SHA256SUMS --repo gtkit/betterzip-mcp --title 'v0.1.0' --generate-notes
+gh release create v0.1.1 dist/betterzip-mcp-darwin-arm64 dist/betterzip-mcp-darwin-amd64 dist/SHA256SUMS --repo gtkit/betterzip-mcp --title 'v0.1.1' --generate-notes
 ```
 
 5. 核对 npm 白名单并打包。包内不得出现 `cmd/`、`internal/`、Go 文件或 `bin/`：
@@ -491,13 +491,13 @@ gh release create v0.1.0 dist/betterzip-mcp-darwin-arm64 dist/betterzip-mcp-darw
 ```bash
 npm pack --dry-run --ignore-scripts
 npm pack --ignore-scripts --pack-destination dist
-tar -tzf dist/gtkit-betterzip-mcp-0.1.0.tgz
+tar -tzf dist/gtkit-betterzip-mcp-0.1.1.tgz
 ```
 
 6. Release 可访问后，在已登录且拥有 `@gtkit` 发布权限的环境发布 npm 包：
 
 ```bash
-npm publish dist/gtkit-betterzip-mcp-0.1.0.tgz --access public
+npm publish dist/gtkit-betterzip-mcp-0.1.1.tgz --access public
 ```
 
 包名与下载仓库已配置为 `@gtkit/betterzip-mcp` 与 `gtkit/betterzip-mcp`；实际 npm 名称可用性、组织权限和远端发布仍由维护者确认。当前 package license 为 `UNLICENSED`，不代替权利人授予开源许可。维护者应在发布前明确分发许可；本项目不打包/再分发 BetterZip 的 7za。

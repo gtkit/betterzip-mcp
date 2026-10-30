@@ -1,6 +1,6 @@
 {
   "name": "@gtkit/betterzip-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local macOS archiving MCP server written in Go, using BetterZip's bundled 7za",
   "license": "UNLICENSED",
   "type": "commonjs",
