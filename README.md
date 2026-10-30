@@ -2,7 +2,7 @@
 
 让 Codex、Claude 等 AI 工具调用 Mac 上的 BetterZip。安装并连接后，直接说“把这个文件夹压缩成 ZIP”即可，无需编写代码。支持 ZIP、7z 的压缩与解压。
 
-> **发布状态：GitHub v0.1.0 Release 正在准备发布，以下 GitHub 下载链接在发布完成后可用；npm 发布暂缓，文中明确标出的 npm 命令暂不可用。公开用户按前面的 Codex 插件安装和 GitHub 二进制下载步骤操作；授权文件夹通过 `setup` 设置并保存，当前没有图形化选择框。**
+> **发布状态：[GitHub v0.1.0 Release](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.0) 已发布，提供 Apple Silicon / Intel 二进制及 SHA-256 校验文件。npm 发布暂缓，文中明确标出的 npm 命令暂不可用。公开用户按前面的 Codex 插件安装和 GitHub 二进制下载步骤操作；授权文件夹通过 `setup` 设置并保存，当前没有图形化选择框。**
 
 ## 安装到你使用的 AI 工具
 
@@ -29,7 +29,7 @@
 
 #### Codex 原生插件安装
 
-使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。**当前正在准备 GitHub v0.1.0 Release，发布完成后即可按以下流程使用；此路线不依赖 npm 发布。**
+使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。**v0.1.0 已发布，以下路线不依赖 npm 发布。**
 
 1. 添加插件市场：
 
@@ -69,6 +69,16 @@ chmod +x ./betterzip-mcp-darwin-amd64
 选择原生插件时无需执行下面的 `codex mcp add`。以上操作由用户手动执行，MCP 服务不会自行安装插件或更改客户端配置。详见 [Codex 官方插件与市场说明](https://developers.openai.com/plugins/build/plugins)。
 
 #### Codex MCP 接入
+
+**直接使用 GitHub Release 二进制：** 先按上面的步骤下载程序并运行 `setup`，在 Finder 中选中该程序，按 `⌥ + ⌘ + C` 复制完整路径，替换下面引号中的文字：
+
+```bash
+codex mcp add betterzip -- "粘贴下载程序的完整路径"
+```
+
+重新启动 Codex，用 `/mcp` 确认 `betterzip` 已连接。此方式直接运行二进制，不需要 Node.js，也不需要 npm；请把下载程序保存在会长期保留的位置。
+
+**通过 npm 安装（尚未发布）：**
 
 1. **以下 npm 路线在 npm 正式发布后可用。** 届时在终端复制并执行以下命令：
 
@@ -170,7 +180,7 @@ printf '%s\n' "$(npm root -g)/@gtkit/betterzip-mcp/bin/betterzip-mcp"
 
 | 客户端 | 本项目已提供 | 仍需适配或交付 |
 | --- | --- | --- |
-| Codex | 原生插件清单、GitHub 市场安装步骤与二进制授权设置；直接 MCP 接入 | GitHub Release 正在准备，npm 发布暂缓 |
+| Codex | GitHub 原生插件安装、Release 二进制与授权设置；直接 MCP 接入 | npm 发布暂缓 |
 | Claude Code | 直接 MCP 接入 | 原生插件市场配置及启动适配 |
 | Claude Desktop | 手动 MCP 配置 | `.mcpb` 一键安装扩展包 |
 | Cursor | 手动 MCP 配置 | 原生插件适配、可直接使用的 MCP 安装链接 |
@@ -234,7 +244,8 @@ betterzip-mcp --diagnose
 | 找不到 `npm` | 安装 Node.js LTS，重新打开终端后再试 |
 | 找不到 `codex` 或 `claude` | 确认对应客户端的命令行工具也已安装，重新打开终端后再试 |
 | npm 找不到包 | npm 发布暂缓；当前使用前面的 GitHub 插件与 Release 二进制路线 |
-| 下载二进制失败 | 确认 GitHub Release 已有对应版本和架构的附件，网络能访问 GitHub；发布准备期间附件可能尚不可用 |
+| 下载二进制失败 | 确认指定 Release 已有对应架构附件，并且启动器所在进程能访问 GitHub |
+| 浏览器能下载，但 Node 启动器连接 GitHub 超时 | 浏览器或系统代理不一定被 Node 继承；配置 Node 使用所需代理，或改用上面的 Release 二进制直接接入 MCP |
 | “没有加载 MCP 工具” | 查看客户端的 MCP 连接状态，确认已连接后重启会话；“已安装”不等于“已连接” |
 | “尚未设置授权目录” | 运行 `betterzip-mcp setup`，选择文件夹后重启客户端 |
 | “路径超出授权目录” | 将文件放入已授权文件夹，或运行 `setup` 更换授权目录后重连 |
@@ -359,7 +370,7 @@ export BETTERZIP_MCP_7ZA="/Applications/BetterZip.app/Contents/Helpers/7za"
 
 `cwd` 的相对路径由 Codex 从插件根解析，`args` 则由 Node 在该工作目录解释。当前兼容入口不会展开参数中的 `${PLUGIN_ROOT}`；使用该占位符会导致 `Cannot find module` 或目录不存在。`env_vars` 是 Codex 的环境变量白名单，只传递本插件的两项配置。
 
-启动器优先使用插件目录的 `bin/betterzip-mcp`。如果首次安装没有二进制，启动器从本项目 Release 下载当前版本并校验 SHA-256。下载信息全部发往 stderr。源码未发布时，请先在原目录构建；正式远端 Release 尚不存在时自动下载会明确失败。
+启动器优先使用插件目录的 `bin/betterzip-mcp`。如果首次安装没有二进制，启动器从本项目 Release 下载当前版本并校验 SHA-256。下载信息全部发往 stderr。调试尚未发布的版本时，需要先在原目录构建；指定版本尚无 Release 时自动下载会明确失败。
 
 修改原项目后，可再次执行 `codex plugin add betterzip-mcp@gtkit-local-tools` 刷新已安装副本。正在运行的聊天可能仍持有旧连接；在客户端重新加载 MCP，或重启 Codex 后再使用。仅看到插件已安装，不代表 MCP 握手成功。
 
