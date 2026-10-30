@@ -208,8 +208,9 @@ func newJob(parent *os.Root) (string, *os.Root, *os.File, error) {
 	return name, root, dir, nil
 }
 
-func closeJob(parent *os.Root, name string, root *os.Root, dir *os.File) error {
-	return errors.Join(dir.Close(), root.Close(), parent.RemoveAll(name))
+// Keep removal errors separate so a failed close does not imply residual data.
+func closeJob(parent *os.Root, name string, root *os.Root, dir *os.File, cleanup cleanupActions) (closeErr, removeErr error) {
+	return errors.Join(cleanup.close(dir), cleanup.close(root)), cleanup.removeAll(parent, name)
 }
 
 func archiveFormat(name string) (string, error) {

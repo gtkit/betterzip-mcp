@@ -13,7 +13,7 @@ import (
 )
 
 // All fixtures live under this original project, never in a project checkout copy.
-func testDir(t *testing.T) string {
+func testDir(t testing.TB) string {
 	t.Helper()
 	dir, err := os.MkdirTemp(".", ".test-")
 	if err != nil {
@@ -31,7 +31,7 @@ func testDir(t *testing.T) string {
 	return abs
 }
 
-func testService(t *testing.T, root string) *Service {
+func testService(t testing.TB, root string) *Service {
 	t.Helper()
 	s, err := New(Config{Root: root, Timeout: DefaultTimeout, MaxBytes: DefaultMaxBytes})
 	if err != nil {

@@ -75,6 +75,16 @@ func toolError(err error) *mcp.CallToolResult {
 	default:
 		message = err.Error()
 	}
+	if failure, ok := errors.AsType[*operationError](err); ok {
+		if failure.result.committed {
+			message = err.Error() + "\n产物已完成（相对于授权目录）：" + failure.result.outputPath + "。资源清理失败，请勿直接重试。"
+		} else {
+			message += "\n资源清理失败，本次未完成提交。请先检查残留数据，不要直接重试。"
+		}
+		if len(failure.result.residualPaths) != 0 {
+			message += "\n未清理的本次数据（相对于授权目录）：" + strings.Join(failure.result.residualPaths, "、")
+		}
+	}
 	return mcp.NewToolResultError(message)
 }
 

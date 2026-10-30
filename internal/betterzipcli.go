@@ -33,6 +33,73 @@ type Service struct {
 	root     *os.Root
 	rootPath string
 	config   Config
+	cleanup  cleanupActions
+}
+
+// Cleanup overrides belong to one service, never to package-wide mutable state.
+// Nil functions use the operating system directly.
+type cleanupActions struct {
+	closeResource func(io.Closer) error
+	removeTree    func(*os.Root, string) error
+}
+
+func (c cleanupActions) close(resource io.Closer) error {
+	if c.closeResource != nil {
+		return c.closeResource(resource)
+	}
+	return resource.Close()
+}
+
+func (c cleanupActions) removeAll(parent *os.Root, name string) error {
+	if c.removeTree != nil {
+		return c.removeTree(parent, name)
+	}
+	return parent.RemoveAll(name)
+}
+
+// operationResult tracks publication independently of later cleanup failures.
+// Its paths are relative to the authorized root; public success paths stay intact.
+type operationResult struct {
+	committed     bool
+	outputPath    string
+	cleanupErr    error
+	residualPaths []string
+}
+
+type operationError struct {
+	result operationResult
+	cause  error
+}
+
+func (e *operationError) Error() string { return e.cause.Error() }
+func (e *operationError) Unwrap() error { return e.cause }
+
+func (r *operationResult) addCleanup(err error) {
+	if err != nil {
+		r.cleanupErr = errors.Join(r.cleanupErr, err)
+	}
+}
+
+func (r *operationResult) finish(err *error) {
+	if r.cleanupErr != nil {
+		*err = &operationError{result: *r, cause: errors.Join(*err, r.cleanupErr)}
+	}
+}
+
+func (r *operationResult) removeAll(parent *os.Root, name, relativePath string, cleanup cleanupActions) {
+	if err := cleanup.removeAll(parent, name); err != nil {
+		r.addCleanup(err)
+		r.residualPaths = append(r.residualPaths, relativePath)
+	}
+}
+
+func (r *operationResult) closeJob(parent *os.Root, name string, root *os.Root, dir *os.File, relativePath string, cleanup cleanupActions) {
+	closeErr, removeErr := closeJob(parent, name, root, dir, cleanup)
+	r.addCleanup(closeErr)
+	if removeErr != nil {
+		r.addCleanup(removeErr)
+		r.residualPaths = append(r.residualPaths, relativePath)
+	}
 }
 
 func New(config Config) (*Service, error) {
@@ -216,6 +283,9 @@ func (s *Service) run(ctx context.Context, dir *os.File, output io.Writer, limit
 func (s *Service) Compress(ctx context.Context, workingDir, output string, sources []string) (path string, err error) {
 	ctx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
+	var result operationResult
+	defer result.finish(&err)
+	cleanup := s.cleanup
 	workRel, err := relativePath(s.rootPath, workingDir)
 	if err != nil {
 		return "", err
@@ -227,7 +297,7 @@ func (s *Service) Compress(ctx context.Context, workingDir, output string, sourc
 	if err != nil {
 		return "", err
 	}
-	defer func() { err = errors.Join(err, work.Close()) }()
+	defer func() { result.addCleanup(cleanup.close(work)) }()
 	name, err := archiveName(output)
 	if err != nil || filepath.Base(output) != output || name != output {
 		return "", fmt.Errorf("%w: output_archive must be a filename", ErrInvalid)
@@ -251,7 +321,7 @@ func (s *Service) Compress(ctx context.Context, workingDir, output string, sourc
 	if err != nil {
 		return "", err
 	}
-	defer func() { err = errors.Join(err, closeJob(work, jobName, job, dir)) }()
+	defer result.closeJob(work, jobName, job, dir, filepath.Join(workRel, jobName), cleanup)
 	if err := job.Mkdir("input", 0700); err != nil {
 		return "", err
 	}
@@ -259,7 +329,7 @@ func (s *Service) Compress(ctx context.Context, workingDir, output string, sourc
 	if err != nil {
 		return "", err
 	}
-	defer func() { err = errors.Join(err, input.Close()) }()
+	defer func() { result.addCleanup(cleanup.close(input)) }()
 	var copied int64
 	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
@@ -284,7 +354,7 @@ func (s *Service) Compress(ctx context.Context, workingDir, output string, sourc
 	if err != nil {
 		return "", err
 	}
-	defer func() { err = errors.Join(err, inputDir.Close()) }()
+	defer func() { result.addCleanup(cleanup.close(inputDir)) }()
 	// The output is a sibling of input; both are private, generated names.
 	_, err = s.run(ctx, inputDir, io.Discard, 4<<20, "a", "-t"+format, "-y", "-bd", "-bb0", "-sccUTF-8", "-spd", "-sse", "-w..", "--", "../result."+format, ".")
 	if err != nil {
@@ -297,6 +367,8 @@ func (s *Service) Compress(ctx context.Context, workingDir, output string, sourc
 	if err := work.Link(filepath.Join(jobName, "result."+format), output); err != nil {
 		return "", err
 	}
+	result.committed = true
+	result.outputPath = filepath.Join(workRel, output)
 	return filepath.Join(workPath, output), nil
 }
 
@@ -305,6 +377,9 @@ func (s *Service) Compress(ctx context.Context, workingDir, output string, sourc
 func (s *Service) Extract(ctx context.Context, archivePath, outputDir string) (path string, err error) {
 	ctx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
+	var result operationResult
+	defer result.finish(&err)
+	cleanup := s.cleanup
 	archiveRel, err := relativePath(s.rootPath, archivePath)
 	if err != nil {
 		return "", err
@@ -325,7 +400,7 @@ func (s *Service) Extract(ctx context.Context, archivePath, outputDir string) (p
 	if err != nil {
 		return "", err
 	}
-	defer func() { err = errors.Join(err, parent.Close()) }()
+	defer func() { result.addCleanup(cleanup.close(parent)) }()
 	if _, err := parent.Lstat(base); !errors.Is(err, os.ErrNotExist) {
 		if err == nil {
 			err = os.ErrExist
@@ -336,7 +411,7 @@ func (s *Service) Extract(ctx context.Context, archivePath, outputDir string) (p
 	if err != nil {
 		return "", err
 	}
-	defer func() { err = errors.Join(err, closeJob(parent, jobName, job, dir)) }()
+	defer result.closeJob(parent, jobName, job, dir, filepath.Join(parentRel, jobName), cleanup)
 	archive := "archive." + format
 	if _, err := copyFile(ctx, s.root, job, archiveRel, archive, s.config.MaxBytes); err != nil {
 		return "", err
@@ -354,15 +429,20 @@ func (s *Service) Extract(ctx context.Context, archivePath, outputDir string) (p
 		return "", err
 	}
 	defer func() {
-		if err != nil {
-			err = errors.Join(err, parent.RemoveAll(base))
+		if !result.committed {
+			result.removeAll(parent, base, outputRel, cleanup)
 		}
 	}()
 	out, err := parent.OpenRoot(base)
 	if err != nil {
 		return "", err
 	}
-	defer func() { err = errors.Join(err, out.Close()) }()
+	outClosed := false
+	defer func() {
+		if !outClosed {
+			err = errors.Join(err, cleanup.close(out))
+		}
+	}()
 	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
 			return "", err
@@ -381,7 +461,7 @@ func (s *Service) Extract(ctx context.Context, archivePath, outputDir string) (p
 			return "", err
 		}
 		n, runErr := s.run(ctx, dir, file, entry.size, "x", "-t"+format, "-so", "-y", "-bd", "-bb0", "-sccUTF-8", "-spd", "--", archive, entry.name)
-		closeErr := file.Close()
+		closeErr := cleanup.close(file)
 		if err := errors.Join(runErr, closeErr); err != nil {
 			return "", err
 		}
@@ -389,5 +469,15 @@ func (s *Service) Extract(ctx context.Context, archivePath, outputDir string) (p
 			return "", fmt.Errorf("%w: extracted size differs from listing", ErrUnsafe)
 		}
 	}
+	closeErr := cleanup.close(out)
+	outClosed = true
+	if closeErr != nil {
+		return "", closeErr
+	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	result.committed = true
+	result.outputPath = outputRel
 	return filepath.Join(s.rootPath, outputRel), nil
 }
