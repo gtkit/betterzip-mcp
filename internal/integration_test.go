@@ -434,9 +434,10 @@ func makeExtractBenchmarkFixture(b *testing.B, c extractBenchmarkCase) extractBe
 	}
 	archive := "input." + format
 	options := []string{"a", "-t" + format, "-mx=1", "-y", "-bd", "-bb0", "-sccUTF-8", "-spd", "-sse", "-w.."}
-	if c.format == "7z-solid" {
+	switch c.format {
+	case "7z-solid":
 		options = append(options, "-ms=on")
-	} else if c.format == "7z-nonsolid" {
+	case "7z-nonsolid":
 		options = append(options, "-ms=off")
 	}
 	options = append(options, "--", "../"+archive, ".")
