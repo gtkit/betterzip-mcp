@@ -2,7 +2,7 @@
 
 让 Codex、Claude 等 AI 工具调用 Mac 上的 BetterZip。安装并连接后，直接说“把这个文件夹压缩成 ZIP”即可，无需编写代码。支持 ZIP、7z 的压缩与解压。
 
-> **发布状态：[GitHub v0.1.1 Release](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.1) 已发布，提供 Apple Silicon / Intel 二进制及 SHA-256 校验文件。npm 发布暂缓，文中明确标出的 npm 命令暂不可用。公开用户按前面的 Codex 插件安装和 GitHub 二进制下载步骤操作；授权文件夹通过 `setup` 设置并保存，当前没有图形化选择框。**
+> **发布状态：v0.1.2 正在准备发布，包含首次使用文件夹选择与聊天中修改授权目录；[v0.1.1](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.1) 仍为当前公开版本。npm 发布继续暂缓。以下自动引导流程需要 v0.1.2 发布后才会通过远程安装获得，旧版 v0.1.1 仍使用 `setup`。**
 
 ## 安装到你使用的 AI 工具
 
@@ -25,11 +25,11 @@
 
 ### Codex
 
-原生插件与直接 MCP 接入二选一，避免同名服务重复注册。两种方式都读取 `setup` 保存的用户授权文件夹。
+原生插件与直接 MCP 接入二选一，避免同名服务重复注册。两种方式共用用户保存的授权文件夹。
 
 #### Codex 原生插件安装
 
-使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。**v0.1.1 已发布，以下路线不依赖 npm 发布。**
+使用支持 `codex plugin` 命令的 Codex，从 GitHub 安装；无需下载源码、进入项目目录或自行编译。此路线不依赖 npm 发布。**下述文件夹自动引导随 v0.1.2 发布，当前正在准备。**
 
 1. 添加插件市场：
 
@@ -43,34 +43,24 @@ codex plugin marketplace add gtkit/betterzip-mcp
 codex plugin add betterzip-mcp@gtkit-local-tools
 ```
 
-3. 从 [v0.1.1 Release](https://github.com/gtkit/betterzip-mcp/releases/tag/v0.1.1) 下载与你的 Mac 对应的程序，用它设置授权目录：
+3. 重新连接插件或重新打开 Codex。首次启动会自动下载匹配架构的运行程序并校验，无需再手动下载二进制。下载进度/错误显示在 MCP 日志中；命令行可用 `/mcp` 查看连接状态。
 
-   - **Apple Silicon（M 系列芯片）**：[betterzip-mcp-darwin-arm64](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/betterzip-mcp-darwin-arm64)
-   - **Intel**：[betterzip-mcp-darwin-amd64](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/betterzip-mcp-darwin-amd64)
+4. 在聊天中说“设置 BetterZip 授权目录”，或直接发起压缩/解压。尚未授权时，会打开 macOS 文件夹选择窗口；选择允许处理的文件夹即可。保存后，后续操作和新会话沿用该选择。取消选择不会授权任何目录，也不会执行本次压缩/解压。
 
-在保存下载文件的文件夹打开终端，只执行对应架构的一组命令。Apple Silicon：
+后续需要更换时，在聊天中说“修改 BetterZip 授权目录”。新操作会使用重新选择的目录，无需卸载重装或手动修改配置；已开始的操作使用开始时的授权范围完成。
+
+选择原生插件时无需执行下面的 `codex mcp add`。以上操作由用户手动执行，MCP 服务不会自行安装插件或更改客户端配置。详见 [Codex 官方插件与市场说明](https://developers.openai.com/plugins/build/plugins)。
+
+#### Codex MCP 接入
+
+**直接使用 GitHub Release 二进制：** 此方式适合不使用插件启动器的用户，需要自行下载。v0.1.1 程序：[Apple Silicon](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/betterzip-mcp-darwin-arm64)、[Intel](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/betterzip-mcp-darwin-amd64)。用 `shasum -a 256 文件名` 与 Release 的 [SHA256SUMS](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/SHA256SUMS) 对照。给下载文件添加执行权限并设置目录，例如 Apple Silicon：
 
 ```bash
 chmod +x ./betterzip-mcp-darwin-arm64
 ./betterzip-mcp-darwin-arm64 setup
 ```
 
-Intel：
-
-```bash
-chmod +x ./betterzip-mcp-darwin-amd64
-./betterzip-mcp-darwin-amd64 setup
-```
-
-可用 `shasum -a 256 文件名` 计算下载文件的 SHA-256，与 Release 中的 [SHA256SUMS](https://github.com/gtkit/betterzip-mcp/releases/download/v0.1.1/SHA256SUMS) 对照。设置保存在用户配置中，Codex 插件会读取同一份设置，不需要指定下载程序所在目录作为授权目录。
-
-4. 完全退出并重新打开 Codex，确认 `betterzip` 已连接；命令行中可用 `/mcp` 查看连接状态。
-
-选择原生插件时无需执行下面的 `codex mcp add`。以上操作由用户手动执行，MCP 服务不会自行安装插件或更改客户端配置。详见 [Codex 官方插件与市场说明](https://developers.openai.com/plugins/build/plugins)。
-
-#### Codex MCP 接入
-
-**直接使用 GitHub Release 二进制：** 先按上面的步骤下载程序并运行 `setup`，在 Finder 中选中该程序，按 `⌥ + ⌘ + C` 复制完整路径，替换下面引号中的文字：
+Intel 用户将文件名替换为 `betterzip-mcp-darwin-amd64`。在 Finder 中选中该程序，按 `⌥ + ⌘ + C` 复制完整路径，替换下面引号中的文字：
 
 ```bash
 codex mcp add betterzip -- "粘贴下载程序的完整路径"
@@ -209,7 +199,9 @@ printf '%s\n' "$(npm root -g)/@gtkit/betterzip-mcp/bin/betterzip-mcp"
 
 “授权文件夹”是你允许工具读写的位置。每位用户自己选择，不会默认使用开发者目录、插件安装目录或整个主目录。
 
-在终端运行一次：
+当前源码提供原生文件夹选择：在聊天中说“设置 BetterZip 授权目录”；首次压缩或解压未配置时也会弹出选择窗口。界面显示的范围是所选文件夹及其子文件夹，模型不能传入路径代替你的选择。取消、超时或保存失败不改变已有选择。窗口最多等待两分钟，可再次发起。
+
+想修改时说“修改 BetterZip 授权目录”，再次选择并保存即可。新请求立即使用新设置，已经开始的操作仍按原授权快照完成。该流程尚未发布；旧版或偏好终端的用户仍可运行：
 
 通过 GitHub 下载程序的用户，请把下文的 `betterzip-mcp` 换成下载程序的实际路径，例如 `./betterzip-mcp-darwin-arm64`。npm 发布并安装后，才可直接使用 `betterzip-mcp` 命令。
 
@@ -225,9 +217,9 @@ betterzip-mcp setup
 betterzip-mcp setup --root "$HOME/Downloads"
 ```
 
-设置会保存到当前用户的配置文件 `~/Library/Application Support/betterzip-mcp/config.json`，独立于插件和项目目录。更换文件夹时再次运行 `setup` 即可，之后重新连接 MCP 或重启客户端。插件升级不会因为替换安装目录而丢失这份设置。
+设置会保存到当前用户的配置文件 `~/Library/Application Support/betterzip-mcp/config.json`，独立于插件和项目目录。当前源码会在每次操作开始时读取设置，因此聊天选择和 `setup` 修改都对下一次请求生效；v0.1.1 修改后需要重连。插件升级不会因为替换安装目录而丢失这份设置。
 
-目录必须已经存在。当前一次设置一个授权根目录，包含其子文件夹；目录外的文件会被拒绝。未设置时仍能发现四个工具，但压缩和解压会明确提示运行 `setup`，不会静默授权插件安装目录。
+目录必须已经存在。一次设置一个授权根目录，包含其子文件夹；目录外的文件会被拒绝。未配置时也能连接并发现工具，连接本身不弹窗；只有文件操作或明确的设置请求才打开选择框。无 macOS 图形会话时选择会明确失败，可使用终端 `setup`。不会静默授权插件安装目录。
 
 需要确认当前生效的目录和来源时运行：
 
@@ -235,7 +227,7 @@ betterzip-mcp setup --root "$HOME/Downloads"
 betterzip-mcp --diagnose
 ```
 
-优先级是：客户端显式传入的 `--root` → `BETTERZIP_MCP_ROOT` 环境变量 → `setup` 保存的用户设置。旧客户端配置若已有 `--root`，它仍优先；想共用保存的设置时，由用户移除旧覆盖项。MCP 服务不会自行修改客户端配置，也不能通过工具参数扩大授权。
+优先级是：客户端显式传入的 `--root` → `BETTERZIP_MCP_ROOT` 环境变量 → 用户保存的设置。存在显式覆盖时，聊天设置入口会说明原因，不会写入一份无效设置；需由用户移除覆盖项后才能通过窗口修改。MCP 服务不会自行修改客户端配置，也不能通过模型提供的工具参数扩大授权。
 
 ## 安装或使用遇到问题
 
@@ -247,8 +239,9 @@ betterzip-mcp --diagnose
 | 下载二进制失败 | 确认指定 Release 已有对应架构附件，并且启动器所在进程能访问 GitHub |
 | 浏览器能下载，但 Node 启动器连接 GitHub 超时 | 浏览器或系统代理不一定被 Node 继承；配置 Node 使用所需代理，或改用上面的 Release 二进制直接接入 MCP |
 | “没有加载 MCP 工具” | 查看客户端的 MCP 连接状态，确认已连接后重启会话；“已安装”不等于“已连接” |
-| “尚未设置授权目录” | 运行 `betterzip-mcp setup`，选择文件夹后重启客户端 |
-| “路径超出授权目录” | 将文件放入已授权文件夹，或运行 `setup` 更换授权目录后重连 |
+| “尚未设置授权目录” | 当前源码可在聊天中要求“设置 BetterZip 授权目录”；旧版运行 `betterzip-mcp setup` 后重连 |
+| “路径超出授权目录” | 将文件放入已授权文件夹，或在聊天中要求“修改 BetterZip 授权目录”；旧版仍通过 `setup` 修改 |
+| 选择窗口被取消、超时或无法打开 | 未授权或修改任何目录，可重新发起；原生选择需要可用的 macOS 桌面会话 |
 | 设置后仍使用旧目录 | 用 `--diagnose` 查看来源，检查客户端是否还有 `--root` 或环境变量覆盖 |
 | 找不到 BetterZip 压缩程序 | 确认 BetterZip 已安装；自定义安装位置的设置见后面的配置说明 |
 | 输出文件或目录已经存在 | 换一个新名称，或先自行移动已有结果 |
@@ -288,7 +281,7 @@ codex plugin add betterzip-mcp@gtkit-local-tools
 codex mcp add betterzip -- "$PWD/bin/betterzip-mcp"
 ```
 
-其他客户端也可直接使用该二进制，授权目录默认读取 `setup` 保存的用户设置，也可用 `--root` 单独覆盖。设置变更后需要重新连接或重启客户端。
+其他客户端也可直接使用该二进制，授权目录默认读取用户保存的设置，也可用 `--root` 单独覆盖。当前源码下一次请求会读取修改后的设置；旧版 v0.1.1 仍需重连。
 
 ## 工具与参数
 
@@ -298,6 +291,7 @@ codex mcp add betterzip -- "$PWD/bin/betterzip-mcp"
 | `betterzip_extract` | archive_path、output_dir | 免费解压未加密的 ZIP/7z 到新目录 |
 | `betterzip_encrypt_compress` | working_dir、output_archive、sources[]、password | 仅会员提示；不压缩、不保存/回显密码 |
 | `betterzip_split_compress` | working_dir、output_archive、sources[]、split_size | 仅会员提示；不创建分卷；split_size 例如 `100m` |
+| `betterzip_configure` | 无参数 | 当前源码新增：打开本机目录选择窗口并保存用户选择，供首次授权或之后修改；不接受模型提供的路径 |
 
 会员接口是产品预留的纯文本提示，尚未接入购买或验证服务，不会假称已检查 BetterZip 授权，也不包含虚构的付费链接。基础功能的返回不包含营销文案。
 
@@ -333,7 +327,8 @@ npm 包只含分发脚本、清单、图标及文档，不含 Go 源码或预编
 | 项目 | 用途 | 默认 / 留空行为 | 约束 |
 | --- | --- | --- | --- |
 | `setup` / `setup --root` | 保存当前用户允许读写的目录 | 无参数时提示输入；留空取消 | 必须是已有目录，保存在用户设置中 |
-| `--root` / `BETTERZIP_MCP_ROOT` | 临时覆盖允许工具读写的数据根目录 | CLI 优先，其次环境变量，然后用户设置；都没有则不授权 | 必须已存在，不回退到启动工作目录 |
+| `betterzip_configure` MCP 工具 | 在本机窗口选择或修改授权目录 | 每次显式调用都会提示；首次文件操作未配置时也会提示 | 空对象参数；由用户选择；两分钟超时，取消不改配置 |
+| `--root` / `BETTERZIP_MCP_ROOT` | 临时覆盖允许工具读写的数据根目录 | CLI 优先，其次环境变量，然后用户设置；都没有则等待首次用户选择 | 必须已存在，不回退到启动工作目录；存在覆盖时不能通过窗口修改 |
 | `--sevenzip` / `BETTERZIP_MCP_7ZA` | 指定可信的 BetterZip `7za` | CLI 优先；留空依次检查 `/Applications/BetterZip.app/Contents/Helpers/7za`、`~/Applications/BetterZip.app/Contents/Helpers/7za` | 显式值必须是可执行文件的绝对路径 |
 | `--timeout` | 单次免费工具调用的总时间上限，涵盖复制、列表与压缩/解压 | `5m` | 正 Go duration，如 `30s`、`10m`；客户端更短 deadline 优先 |
 | `--max-bytes` | 单次源文件总字节 / 解压总字节上限；输入归档也受同一值限制 | `4294967296`（4 GiB） | 正整数，最多 1 PiB；按实际传输字节校验 |
@@ -374,7 +369,7 @@ export BETTERZIP_MCP_7ZA="/Applications/BetterZip.app/Contents/Helpers/7za"
 
 修改原项目后，可再次执行 `codex plugin add betterzip-mcp@gtkit-local-tools` 刷新已安装副本。正在运行的聊天可能仍持有旧连接；在客户端重新加载 MCP，或重启 Codex 后再使用。仅看到插件已安装，不代表 MCP 握手成功。
 
-请先运行 `setup` 保存用户授权目录，或显式提供 `--root` / `BETTERZIP_MCP_ROOT`。未配置时不使用插件安装目录；免费工具会返回设置指引。插件包不会自动编辑用户的配置文件。插件的 `composerIcon` 和 `logo` 均使用随包提供的 `icon.png`，来源为本机 BetterZip 6 应用图标。
+当前源码在首次文件操作时通过原生窗口获得用户选择，并仅保存自己的用户授权配置；也可显式运行 `setup`。未配置或用户取消时不使用插件安装目录。插件不会自行修改 Codex 或其他客户端的配置。插件的 `composerIcon` 和 `logo` 均使用随包提供的 `icon.png`，来源为本机 BetterZip 6 应用图标。
 
 ## 环境与文件
 
@@ -387,7 +382,8 @@ export BETTERZIP_MCP_7ZA="/Applications/BetterZip.app/Contents/Helpers/7za"
 cmd/main.go                   stdio 入口、配置、只读诊断
 internal/betterzipcli.go       7za 调用、超时、取消与输出处理
 internal/security.go          路径、归档条目与资源限制
-internal/tools.go             四个 MCP 工具
+internal/tools.go             四个归档工具及授权配置工具
+internal/authorization.go     原生文件夹选择、首次引导与按请求读取授权
 go.mod / go.sum               固定 Go 依赖
 .codex-plugin/plugin.json     Codex 兼容清单
 .mcp.json                     stdio 启动连接

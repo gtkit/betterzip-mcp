@@ -15,12 +15,13 @@ import (
 )
 
 const (
-	Version               = "0.1.1"
+	Version               = "0.1.2"
 	DefaultTimeout        = 5 * time.Minute
 	DefaultMaxBytes int64 = 4 << 30
 )
 
-// Config is trusted startup configuration, never supplied by an MCP tool call.
+// Config comes from trusted startup settings or native user consent, never from
+// a model-supplied root in an MCP tool call.
 type Config struct {
 	Root     string
 	SevenZip string
@@ -103,8 +104,8 @@ func (r *operationResult) closeJob(parent *os.Root, name string, root *os.Root, 
 }
 
 func New(config Config) (*Service, error) {
-	if config.Timeout <= 0 || config.MaxBytes <= 0 || config.MaxBytes > 1<<50 {
-		return nil, fmt.Errorf("%w: timeout and max-bytes must be positive; max-bytes <= 1 PiB", ErrInvalid)
+	if err := config.validate(); err != nil {
+		return nil, err
 	}
 	path, err := expandPath(config.Root)
 	if err != nil {
@@ -123,6 +124,13 @@ func New(config Config) (*Service, error) {
 		return nil, err
 	}
 	return &Service{root: root, rootPath: path, config: config}, nil
+}
+
+func (c Config) validate() error {
+	if c.Timeout <= 0 || c.MaxBytes <= 0 || c.MaxBytes > 1<<50 {
+		return fmt.Errorf("%w: timeout and max-bytes must be positive; max-bytes <= 1 PiB", ErrInvalid)
+	}
+	return nil
 }
 
 func (s *Service) Close() error     { return s.root.Close() }

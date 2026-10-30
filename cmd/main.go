@@ -70,22 +70,23 @@ func run() (err error) {
 			override = root
 		}
 	})
-	rootPath, rootSource, err := betterzip.ResolveRoot(override)
-	if err != nil {
-		return err
-	}
-	var s *betterzip.Service
-	if rootPath != "" {
-		s, err = betterzip.New(betterzip.Config{Root: rootPath, SevenZip: *helper, Timeout: *timeout, MaxBytes: *maxBytes})
-		if err != nil {
-			return fmt.Errorf("授权目录不可用，请检查 --root、环境变量或重新运行 betterzip-mcp setup: %w", err)
-		}
-		defer func() { err = errors.Join(err, s.Close()) }()
-	}
+	config := betterzip.Config{SevenZip: *helper, Timeout: *timeout, MaxBytes: *maxBytes}
 	if *diagnose {
-		if s == nil {
+		var rootPath, rootSource string
+		rootPath, rootSource, err = betterzip.ResolveRoot(override)
+		if err != nil {
+			return err
+		}
+		if rootPath == "" {
 			return betterzip.ErrNotConfigured
 		}
+		config.Root = rootPath
+		var s *betterzip.Service
+		s, err = betterzip.New(config)
+		if err != nil {
+			return err
+		}
+		defer func() { err = errors.Join(err, s.Close()) }()
 		fmt.Fprintln(os.Stderr, "Authorized root:", s.RootPath())
 		fmt.Fprintln(os.Stderr, "Root source:", rootSource)
 		path, err := betterzip.FindSevenZip(*helper)
@@ -101,9 +102,13 @@ func run() (err error) {
 		fmt.Fprintln(os.Stderr, "No client configuration was changed. See README.md for manual setup.")
 		return nil
 	}
+	mcpServer, err := betterzip.NewUserMCPServer(config, override)
+	if err != nil {
+		return err
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	transport := server.NewStdioServer(betterzip.NewMCPServer(s))
+	transport := server.NewStdioServer(mcpServer)
 	for _, option := range []server.StdioOption{server.WithErrorLogger(log.New(os.Stderr, "betterzip-mcp: ", log.LstdFlags)), server.WithWorkerPoolSize(2), server.WithQueueSize(16)} {
 		option(transport)
 	}
@@ -150,6 +155,6 @@ func runSetup(args []string, input io.Reader, output io.Writer) error {
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintln(output, "授权目录已保存。请重新连接 MCP 或重启客户端；以后无需每次设置。\n用户配置文件：", filename)
+	_, err = fmt.Fprintln(output, "授权目录已保存，后续操作将使用此设置；以后无需每次设置。旧版连接需重新连接后生效。\n用户配置文件：", filename)
 	return err
 }

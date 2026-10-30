@@ -7,14 +7,22 @@ const path = require("node:path");
 const { spawn, spawnSync } = require("node:child_process");
 const { setTimeout: delay } = require("node:timers/promises");
 
-const binary = path.join(__dirname, "bin", "betterzip-mcp");
+const binary = process.env.BETTERZIP_TEST_BINARY
+  ? path.resolve(__dirname, process.env.BETTERZIP_TEST_BINARY)
+  : path.join(__dirname, "bin", "betterzip-mcp");
 
 class Client {
-  constructor(root, { launcher = false, args = [], explicitRoot = true, env = process.env } = {}) {
+  constructor(root, { launcher = false, packageRoot = __dirname, args = [], explicitRoot = true, env = process.env } = {}) {
     const command = launcher ? process.execPath : binary;
-    const launchArgs = launcher ? [path.join(__dirname, "launch.js")] : [];
+    const launchArgs = launcher
+      ? ["-e", 'require(process.env.BETTERZIP_TEST_LAUNCHER).main(process.env.BETTERZIP_TEST_PACKAGE, process.argv.slice(1)).catch(e => { console.error(e); process.exitCode = 1; });', "--"]
+      : [];
     const rootArgs = explicitRoot ? ["--root", root] : [];
-    this.child = spawn(command, [...launchArgs, ...rootArgs, ...args], { cwd: __dirname, env, stdio: ["pipe", "pipe", "pipe"] });
+    this.child = spawn(command, [...launchArgs, ...rootArgs, ...args], {
+      cwd: __dirname,
+      env: { ...env, BETTERZIP_TEST_LAUNCHER: path.join(__dirname, "launch.js"), BETTERZIP_TEST_PACKAGE: packageRoot },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     this.pending = new Map();
     this.nextID = 1;
     this.buffer = "";
@@ -79,12 +87,15 @@ class Client {
 async function fixture(t) {
   await fs.access(binary);
   const root = await fs.mkdtemp(path.join(__dirname, ".test-protocol-"));
+  const packageRoot = path.join(root, "package");
+  await fs.mkdir(path.join(packageRoot, "bin"), { recursive: true });
+  await fs.symlink(path.relative(path.join(packageRoot, "bin"), binary), path.join(packageRoot, "bin", "betterzip-mcp"));
   const clients = [];
   t.after(async () => {
     for (const client of clients) await client.close();
     await fs.rm(root, { recursive: true, force: true });
   });
-  return { root, client: (options) => { const client = new Client(root, options); clients.push(client); return client; } };
+  return { root, client: (options) => { const client = new Client(root, { packageRoot, ...options }); clients.push(client); return client; } };
 }
 
 async function helperStarted(marker) {
@@ -104,13 +115,13 @@ async function blockingHelper(root) {
   return { helper, marker };
 }
 
-test("stdio initializes, discovers four tools and performs a real ZIP round trip", async (t) => {
+test("stdio initializes, discovers five tools and performs a real ZIP round trip", async (t) => {
   const { root, client } = await fixture(t);
   await fs.writeFile(path.join(root, "hello.txt"), "stdio round trip 中文\n");
   const c = client();
   await c.initialize();
   const listed = await c.request("tools/list");
-  assert.deepEqual(listed.tools.map((tool) => tool.name).sort(), ["betterzip_compress", "betterzip_encrypt_compress", "betterzip_extract", "betterzip_split_compress"]);
+  assert.deepEqual(listed.tools.map((tool) => tool.name).sort(), ["betterzip_compress", "betterzip_configure", "betterzip_encrypt_compress", "betterzip_extract", "betterzip_split_compress"]);
   for (const tool of listed.tools) assert.equal(tool.inputSchema.additionalProperties, false);
   const compressed = await c.request("tools/call", { name: "betterzip_compress", arguments: { working_dir: ".", output_archive: "hello.zip", sources: ["hello.txt"] } });
   assert.notEqual(compressed.isError, true);
@@ -161,20 +172,20 @@ test("version, help and diagnosis keep stdout free of non-protocol output", asyn
   }
 });
 
-test("unconfigured MCP advertises tools but grants no implicit directory", async (t) => {
+test("unconfigured MCP advertises configuration without granting an implicit directory", async (t) => {
   const { root, client } = await fixture(t);
   const env = { ...process.env, HOME: root };
   delete env.BETTERZIP_MCP_ROOT;
   await fs.writeFile(path.join(root, "hello.txt"), "not authorized yet");
   const c = client({ explicitRoot: false, env });
   await c.initialize();
-  assert.equal((await c.request("tools/list")).tools.length, 4);
-  const result = await c.request("tools/call", { name: "betterzip_compress", arguments: { working_dir: root, output_archive: "no.zip", sources: ["hello.txt"] } });
+  assert.equal((await c.request("tools/list")).tools.length, 5);
+  const result = await c.request("tools/call", { name: "betterzip_configure", arguments: { root } });
   assert.equal(result.isError, true);
-  assert.match(JSON.stringify(result), /betterzip-mcp setup/);
+  assert.match(JSON.stringify(result), /JSON schema/);
   const member = await c.request("tools/call", { name: "betterzip_split_compress", arguments: { working_dir: root, output_archive: "split.zip", sources: ["hello.txt"], split_size: "100m" } });
   assert.notEqual(member.isError, true);
-  assert.deepEqual(await fs.readdir(root), ["hello.txt"]);
+  assert.deepEqual((await fs.readdir(root)).sort(), ["hello.txt", "package"]);
 });
 
 test("setup persists the selected directory across launcher restarts", async (t) => {
@@ -183,7 +194,7 @@ test("setup persists the selected directory across launcher restarts", async (t)
   delete env.BETTERZIP_MCP_ROOT;
   await fs.mkdir(path.join(root, "data"));
   await fs.writeFile(path.join(root, "data/hello.txt"), "persistent root\n");
-  const setup = spawnSync(process.execPath, [path.join(__dirname, "launch.js"), "setup", "--root", "~/data"], { env, encoding: "utf8" });
+  const setup = spawnSync(binary, ["setup", "--root", "~/data"], { env, encoding: "utf8" });
   assert.equal(setup.status, 0, setup.stderr);
   assert.equal(setup.stdout, "");
   const c = client({ explicitRoot: false, launcher: true, env });
@@ -193,4 +204,12 @@ test("setup persists the selected directory across launcher restarts", async (t)
   const extracted = await c.request("tools/call", { name: "betterzip_extract", arguments: { archive_path: "ok.zip", output_dir: "out" } });
   assert.notEqual(extracted.isError, true, JSON.stringify(extracted));
   assert.equal(await fs.readFile(path.join(root, "data/out/hello.txt"), "utf8"), "persistent root\n");
+  await fs.mkdir(path.join(root, "next"));
+  await fs.writeFile(path.join(root, "next/hello.txt"), "changed root\n");
+  const changed = spawnSync(binary, ["setup", "--root", "~/next"], { env, encoding: "utf8" });
+  assert.equal(changed.status, 0, changed.stderr);
+  const next = await c.request("tools/call", { name: "betterzip_compress", arguments: { working_dir: ".", output_archive: "next.zip", sources: ["hello.txt"] } });
+  assert.notEqual(next.isError, true, JSON.stringify(next));
+  await fs.access(path.join(root, "next/next.zip"));
+  await assert.rejects(fs.stat(path.join(root, "data/next.zip")), { code: "ENOENT" });
 });

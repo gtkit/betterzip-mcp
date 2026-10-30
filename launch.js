@@ -7,16 +7,23 @@ const os = require("node:os");
 const { spawn } = require("node:child_process");
 const { install, platformArch } = require("./install.js");
 
-async function main() {
-  platformArch();
-  const binary = path.join(__dirname, "bin", "betterzip-mcp");
+async function ensureBinary(packageRoot = __dirname, installer = install) {
+  const binary = path.join(packageRoot, "bin", "betterzip-mcp");
   try {
     await fs.access(binary, fs.constants.X_OK);
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
-    await install(); // Local Codex plugin bootstrap; npm normally installed it already.
+    process.stderr.write("betterzip-mcp: 正在下载并校验运行程序，完成后会自动启动，无需手动下载。\n");
+    await installer({ packageRoot });
+    await fs.access(binary, fs.constants.X_OK);
   }
-  const child = spawn(binary, process.argv.slice(2), { stdio: "inherit", shell: false });
+  return binary;
+}
+
+async function main(packageRoot = __dirname, args = process.argv.slice(2)) {
+  platformArch();
+  const binary = await ensureBinary(packageRoot);
+  const child = spawn(binary, args, { stdio: "inherit", shell: false });
   const handlers = new Map();
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
     const handler = () => child.kill(signal);
@@ -41,4 +48,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main };
+module.exports = { main, ensureBinary };

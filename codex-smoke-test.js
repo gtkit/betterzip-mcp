@@ -126,7 +126,7 @@ async function main() {
     assert.equal(server.toolsError, null, server.toolsError);
     assert.equal(server.serverInfo.name, "betterzip-mcp");
     evidence.tools = Object.keys(server.tools).sort();
-    assert.deepEqual(evidence.tools, ["betterzip_compress", "betterzip_encrypt_compress", "betterzip_extract", "betterzip_split_compress"]);
+    assert.deepEqual(evidence.tools, ["betterzip_compress", "betterzip_configure", "betterzip_encrypt_compress", "betterzip_extract", "betterzip_split_compress"]);
     evidence.serverInfo = server.serverInfo;
 
     const call = async (tool, args) => {

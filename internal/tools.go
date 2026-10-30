@@ -69,9 +69,9 @@ func toolError(err error) *mcp.CallToolResult {
 	var message string
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
-		message = "操作超时，已终止 7za 子进程。请缩小输入规模或增大 --timeout。"
+		message = "操作超时。目录选择请重新发起；归档操作可缩小输入规模或增大 --timeout。"
 	case errors.Is(err, context.Canceled):
-		message = "操作已取消，已终止 7za 子进程。"
+		message = "操作已取消。"
 	default:
 		message = err.Error()
 	}
@@ -88,16 +88,54 @@ func toolError(err error) *mcp.CallToolResult {
 	return mcp.NewToolResultError(message)
 }
 
-// NewMCPServer registers only local tools. It exposes no sampling, LLM, key,
-// payment, configuration-writing or remote-network capability.
+// NewMCPServer retains fixed-root operation for existing embedded callers.
 func NewMCPServer(service *Service) *server.MCPServer {
+	return newMCPServer(func(context.Context) (*Service, bool, error) {
+		if service == nil {
+			return nil, false, ErrNotConfigured
+		}
+		return service, false, nil
+	}, nil)
+}
+
+type serviceSource func(context.Context) (*Service, bool, error)
+
+func archiveTool(ctx context.Context, source serviceSource, prefix string, operation func(*Service) (string, error)) *mcp.CallToolResult {
+	service, owned, err := source(ctx)
+	if err != nil {
+		return toolError(err)
+	}
+	path, err := func() (path string, err error) {
+		if owned {
+			defer func() {
+				closeErr := service.Close()
+				if err == nil && closeErr != nil {
+					err = fmt.Errorf("产物已完成：%s。关闭授权目录失败，请勿直接重试：%w", path, closeErr)
+				} else {
+					err = errors.Join(err, closeErr)
+				}
+			}()
+		}
+		return operation(service)
+	}()
+	if err != nil {
+		return toolError(err)
+	}
+	return mcp.NewToolResultText(prefix + path)
+}
+
+func newMCPServer(source serviceSource, configure func(context.Context) (string, error)) *server.MCPServer {
 	s := server.NewMCPServer("betterzip-mcp", Version, server.WithToolCapabilities(false), server.WithRecovery())
 	schema := func(properties, required string) []byte {
 		return []byte(`{"type":"object","additionalProperties":false,"properties":{` + properties + `},"required":[` + required + `]}`)
 	}
 	compressionSchema := schema(compressProperties, `"working_dir","output_archive","sources"`)
+	onboarding := ""
+	if configure != nil {
+		onboarding = " First use opens a native folder chooser if no folder is authorized."
+	}
 	s.AddTool(mcp.NewTool("betterzip_compress",
-		mcp.WithDescription("Free: create a new ZIP or 7z using BetterZip's bundled 7za. All sources must stay within working_dir and the configured root. Never overwrites."),
+		mcp.WithDescription("Free: create a new ZIP or 7z using BetterZip's bundled 7za. All sources must stay within working_dir and the authorized root. Never overwrites."+onboarding),
 		mcp.WithRawInputSchema(compressionSchema)),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args compressArgs
@@ -107,17 +145,12 @@ func NewMCPServer(service *Service) *server.MCPServer {
 			if err := args.validate(); err != nil {
 				return toolError(err), nil
 			}
-			if service == nil {
-				return toolError(ErrNotConfigured), nil
-			}
-			path, err := service.Compress(ctx, args.WorkingDir, args.OutputArchive, args.Sources)
-			if err != nil {
-				return toolError(err), nil
-			}
-			return mcp.NewToolResultText("压缩完成：" + path), nil
+			return archiveTool(ctx, source, "压缩完成：", func(service *Service) (string, error) {
+				return service.Compress(ctx, args.WorkingDir, args.OutputArchive, args.Sources)
+			}), nil
 		})
 	s.AddTool(mcp.NewTool("betterzip_extract",
-		mcp.WithDescription("Free: extract an unencrypted ZIP or 7z to a new directory inside the configured root. Rejects unsafe entries and existing output directories."),
+		mcp.WithDescription("Free: extract an unencrypted ZIP or 7z to a new directory inside the authorized root. Rejects unsafe entries and existing output directories."+onboarding),
 		mcp.WithRawInputSchema(schema(`"archive_path":{"type":"string","minLength":1},"output_dir":{"type":"string","minLength":1}`, `"archive_path","output_dir"`))),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args extractArgs
@@ -127,14 +160,9 @@ func NewMCPServer(service *Service) *server.MCPServer {
 			if strings.TrimSpace(args.ArchivePath) == "" || strings.TrimSpace(args.OutputDir) == "" {
 				return toolError(ErrInvalid), nil
 			}
-			if service == nil {
-				return toolError(ErrNotConfigured), nil
-			}
-			path, err := service.Extract(ctx, args.ArchivePath, args.OutputDir)
-			if err != nil {
-				return toolError(err), nil
-			}
-			return mcp.NewToolResultText("解压完成：" + path), nil
+			return archiveTool(ctx, source, "解压完成：", func(service *Service) (string, error) {
+				return service.Extract(ctx, args.ArchivePath, args.OutputDir)
+			}), nil
 		})
 	s.AddTool(mcp.NewTool("betterzip_encrypt_compress",
 		mcp.WithDescription("Membership information only. Does not create archives, run 7za or store passwords."),
@@ -168,5 +196,23 @@ func NewMCPServer(service *Service) *server.MCPServer {
 			}
 			return mcp.NewToolResultText("分卷压缩是本插件预留的会员功能，本次未执行压缩。请使用已购买的 BetterZip 在本机创建分卷；本插件尚未接入会员购买或验证服务。"), nil
 		})
+	if configure != nil {
+		s.AddTool(mcp.NewTool("betterzip_configure",
+			mcp.WithDescription("Set or change the authorized folder for BetterZip. Opens a native macOS folder chooser; the user must select the folder. Saves the choice for future calls and sessions. No path argument is accepted."),
+			mcp.WithReadOnlyHintAnnotation(false),
+			mcp.WithDestructiveHintAnnotation(true),
+			mcp.WithOpenWorldHintAnnotation(false),
+			mcp.WithRawInputSchema(schema("", ""))),
+			func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+				if err := decodeArguments(request, &struct{}{}); err != nil {
+					return toolError(err), nil
+				}
+				root, err := configure(ctx)
+				if err != nil {
+					return toolError(err), nil
+				}
+				return mcp.NewToolResultText("授权目录已保存：" + root + "。后续操作将使用此目录及其子目录；可随时要求修改授权目录。"), nil
+			})
+	}
 	return s
 }

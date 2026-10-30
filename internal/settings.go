@@ -13,7 +13,7 @@ import (
 
 // ErrNotConfigured keeps an unconfigured server discoverable without granting
 // access to its installation directory or any other implicit filesystem root.
-var ErrNotConfigured = errors.New("尚未设置授权目录。请在终端运行 betterzip-mcp setup，选择允许读写的文件夹，然后重新连接客户端")
+var ErrNotConfigured = errors.New("尚未设置授权目录。请让 BetterZip 设置授权目录，在弹出的窗口选择允许读写的文件夹；终端也可运行 betterzip-mcp setup")
 
 const maxSettingsBytes = 8192
 
@@ -70,7 +70,7 @@ func ResolveRoot(override *string) (root, source string, err error) {
 	decodeErr := json.Unmarshal(data, &saved, json.RejectUnknownMembers(true))
 	anchored := filepath.IsAbs(saved.Root) || saved.Root == "~" || strings.HasPrefix(saved.Root, "~/")
 	if len(data) > maxSettingsBytes || decodeErr != nil || strings.TrimSpace(saved.Root) == "" || !anchored {
-		return "", "", errors.New("授权目录设置无效，请重新运行 betterzip-mcp setup；未使用默认目录")
+		return "", "", errors.New("授权目录设置无效，请让 BetterZip 修改授权目录，或重新运行 betterzip-mcp setup；未使用默认目录")
 	}
 	return saved.Root, "用户设置", nil
 }
